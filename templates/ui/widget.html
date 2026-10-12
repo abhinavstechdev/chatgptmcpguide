@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MCP App Widget Template</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #0d0d0d;
+      --text-muted: #6e6e80;
+      --border: #e5e5e5;
+      --accent: #10a37f;
+      --accent-hover: #0d8a6c;
+      --card-bg: #f7f7f8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #212121;
+        --text: #ececec;
+        --text-muted: #b4b4b4;
+        --border: #303030;
+        --accent: #10a37f;
+        --accent-hover: #1abc9c;
+        --card-bg: #2f2f2f;
+      }
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .widget-container {
+      max-width: 480px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      background: var(--card-bg);
+    }
+
+    .widget-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+
+    .widget-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .widget-content {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    button.secondary:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .status-badge {
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      background: rgba(16, 163, 127, 0.1);
+      color: var(--accent);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <div class="widget-header">
+      <span class="widget-title" id="title">Widget Component</span>
+      <span class="status-badge" id="status">Ready</span>
+    </div>
+
+    <div class="widget-content" id="content">
+      Loading widget data…
+    </div>
+
+    <div class="button-group">
+      <button id="primary-action">Action</button>
+      <button class="secondary" id="fullscreen-toggle">Expand</button>
+    </div>
+  </div>
+
+  <script type="module">
+    // State management
+    let state = {
+      data: null,
+      displayMode: "inline"
+    };
+
+    let rpcId = 1;
+    const pendingRequests = new Map();
+
+    const titleEl = document.getElementById("title");
+    const contentEl = document.getElementById("content");
+    const statusEl = document.getElementById("status");
+    const primaryBtn = document.getElementById("primary-action");
+    const fullscreenBtn = document.getElementById("fullscreen-toggle");
+
+    // Standard MCP Apps JSON-RPC request over postMessage
+    function sendRpc(method, params) {
+      const id = rpcId++;
+      window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+      return new Promise((resolve, reject) => {
+        pendingRequests.set(id, { resolve, reject });
+      });
+    }
+
+    function render(data) {
+      if (!data) return;
+      if (data.title) titleEl.textContent = data.title;
+      if (data.body) contentEl.textContent = data.body;
+      if (data.status) statusEl.textContent = data.status;
+    }
+
+    // Check for native window.openai extension bridge (legacy or extensions)
+    const hasWindowOpenAi = typeof window !== "undefined" && Boolean(window.openai);
+
+    // Initial render from window.openai if available
+    if (hasWindowOpenAi && window.openai.toolOutput) {
+      state.data = window.openai.toolOutput;
+      render(state.data);
+    }
+
+    // Message listener for standard MCP Apps protocol
+    window.addEventListener("message", (event) => {
+      if (event.source !== window.parent) return;
+      const msg = event.data;
+      if (!msg || msg.jsonrpc !== "2.0") return;
+
+      // Handle RPC response
+      if (typeof msg.id === "number" && pendingRequests.has(msg.id)) {
+        const { resolve, reject } = pendingRequests.get(msg.id);
+        pendingRequests.delete(msg.id);
+        if (msg.error) reject(msg.error);
+        else resolve(msg.result);
+        return;
+      }
+
+      // Handle tool result notification from host
+      if (msg.method === "ui/notifications/tool-result") {
+        const result = msg.params?.structuredContent || msg.params;
+        state.data = result;
+        render(result);
+      }
+
+      // Handle tool input notification
+      if (msg.method === "ui/notifications/tool-input") {
+        console.log("Received tool input:", msg.params);
+      }
+    }, { passive: true });
+
+    // Primary action: Call a tool on the MCP server
+    primaryBtn.addEventListener("click", async () => {
+      primaryBtn.disabled = true;
+      try {
+        let result;
+        if (hasWindowOpenAi && typeof window.openai.callTool === "function") {
+          result = await window.openai.callTool("execute_action", { action: "refresh" });
+        } else {
+          result = await sendRpc("tools/call", {
+            name: "execute_action",
+            arguments: { action: "refresh" }
+          });
+        }
+        if (result?.structuredContent) {
+          render(result.structuredContent);
+        }
+      } catch (err) {
+        console.error("Action error:", err);
+      } finally {
+        primaryBtn.disabled = false;
+      }
+    });
+
+    // Toggle presentation display mode
+    fullscreenBtn.addEventListener("click", async () => {
+      const nextMode = state.displayMode === "inline" ? "fullscreen" : "inline";
+      if (hasWindowOpenAi && window.openai.requestDisplayMode) {
+        await window.openai.requestDisplayMode({ mode: nextMode });
+      } else {
+        await sendRpc("ui/display-mode", { mode: nextMode });
+      }
+      state.displayMode = nextMode;
+      fullscreenBtn.textContent = nextMode === "fullscreen" ? "Exit Fullscreen" : "Expand";
+    });
+
+    // Notify host that widget is initialized and ready
+    window.parent.postMessage({
+      jsonrpc: "2.0",
+      method: "ui/notifications/initialized"
+    }, "*");
+  </script>
+</body>
+</html>

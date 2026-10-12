@@ -1,0 +1,24 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "acme-tasks-server": {
+      "type": "streamable-http",
+      "url": "https://api.example.com/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "client": {
+              "mode": "provided",
+              "clientId": "chatgpt-acme-tasks-client",
+              "tokenEndpointAuthMethod": "client_secret_basic"
+            },
+            "authorizationUrl": "https://auth.example.com/oauth/authorize",
+            "tokenUrl": "https://auth.example.com/oauth/token",
+            "baseScopes": ["tasks:read", "tasks:write"]
+          }
+        }
+      }
+    }
+  }
+}

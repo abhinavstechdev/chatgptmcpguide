@@ -1,0 +1,20 @@
+{
+  "name": "local-dev-marketplace",
+  "interface": {
+    "displayName": "Local Dev Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "acme-task-manager",
+      "source": {
+        "source": "local",
+        "path": "./plugins/acme-task-manager"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

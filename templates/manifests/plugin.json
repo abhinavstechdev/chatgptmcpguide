@@ -1,0 +1,48 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "acme-task-manager",
+  "version": "1.0.0",
+  "description": "Streamline task tracking and sprint planning directly within ChatGPT.",
+  "author": {
+    "name": "Acme Engineering",
+    "email": "support@example.com",
+    "url": "https://example.com"
+  },
+  "homepage": "https://example.com/plugins/task-manager",
+  "repository": "https://github.com/example/acme-task-manager",
+  "license": "MIT",
+  "keywords": ["tasks", "productivity", "management", "workflow"],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/setup/SKILL.md",
+      "interface": {
+        "displayName": "Acme Tasks",
+        "shortDescription": "Manage sprint tasks & items",
+        "longDescription": "Acme Tasks connects your ChatGPT workspace directly to your task management board. Create tickets, inspect sprint velocity, query roadblocks, and interact with live interactive task widgets directly in chat.",
+        "developerName": "Acme Corp",
+        "category": "Productivity",
+        "capabilities": [
+          "Create and update tasks",
+          "Display interactive kanban boards",
+          "Sync sprint metrics"
+        ],
+        "websiteURL": "https://example.com",
+        "privacyPolicyURL": "https://example.com/privacy",
+        "termsOfServiceURL": "https://example.com/terms",
+        "defaultPrompt": [
+          "Show my current sprint tasks",
+          "Create a high-priority bug report",
+          "Summarize overdue team action items"
+        ],
+        "brandColor": "#10A37F",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/logo.png",
+        "screenshots": [
+          "./assets/screenshot-1.png",
+          "./assets/screenshot-2.png",
+          "./assets/screenshot-3.png"
+        ]
+      }
+    }
+  }
+}
